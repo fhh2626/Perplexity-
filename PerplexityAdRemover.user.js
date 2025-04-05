@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         Perplexity UI Enhancer - Fixed
+// @name         Perplexity UI Enhancer - Complete
 // @namespace    https://liufo.com/
-// @version      2.1
-// @description  Reliably removes ads and Discover button without breaking the chat
-// @author       LiuFo Team (with improvements)
+// @version      3.0
+// @description  Removes all ads and Discover button including the ones below the search box
+// @author       LiuFo Team (with comprehensive improvements)
 // @match        https://*.perplexity.ai/*
 // @grant        none
 // @run-at       document-start
@@ -12,132 +12,115 @@
 (function() {
     'use strict';
 
-    // Core CSS injection for immediate effect - using targeted selectors
+    // More comprehensive CSS injection that specifically targets the homepage grid items
     function injectCoreStyles() {
         const style = document.createElement('style');
         style.textContent = `
-            /* Targeted ad removal */
-            a[aria-label="Discover"] {
+            /* Hide Discover button */
+            a[aria-label="Discover"],
+            div:has(> a[aria-label="Discover"]) {
                 display: none !important;
             }
 
-            /* Only target specific ad containers - avoid targeting all grids */
-            .gap-sm.grid.grid-cols-6 > div:has(a[href*="windows"]),
-            .gap-sm.grid.grid-cols-6 > div:has(svg[data-testid="WeatherIcon"]),
-            .gap-sm.grid.grid-cols-6 > div:has(img[alt*="news"]),
-            .gap-sm.grid.grid-cols-6 > div:has(span:contains("Sponsored")),
-            .gap-sm.grid.grid-cols-6 > div:has(span:contains("广告")) {
+            /* Target the entire promotional grid below search box */
+            .mt-lg div.gap-sm.grid.grid-cols-6 {
+                display: none !important;
+            }
+
+            /* Hide Windows app promotion */
+            div:has(> a[href*="windows"]),
+            div:has(> a[href*="Windows"]),
+            div[class*="Introducing"] {
+                display: none !important;
+            }
+
+            /* Hide specific ads by content indicators */
+            div:has(> div:has(> svg[data-testid="WeatherIcon"])),
+            div:has(> div:has(> img[src*="news"])),
+            div:has(> div:has(> span:contains("Sponsored"))),
+            div:has(> div:has(> span:contains("广告"))) {
+                display: none !important;
+            }
+
+            /* Target news items by their structure */
+            div.col-span-2.row-span-1.rounded-md,
+            div.col-span-2.row-span-2.rounded-md {
                 display: none !important;
             }
         `;
         document.head.appendChild(style);
     }
 
-    // Element removal functions with safer selectors
-    const cleanupOperations = {
-        removeAds: () => {
-            // Safely target only known ad elements
-            const adSelectors = [
-                'a[href*="windows"]',
-                'svg[data-testid="WeatherIcon"]',
-                'img[alt*="news"]',
-                'div:has(> span:contains("Sponsored"))',
-                'div:has(> span:contains("广告"))'
-            ];
+    // Enhanced element removal function
+    function cleanupElements() {
+        // Remove the entire grid container below search box
+        document.querySelectorAll('.mt-lg div.gap-sm.grid.grid-cols-6').forEach(grid => {
+            grid.style.display = 'none';
+        });
 
-            // Only remove ads in the grid that appears at the top
-            document.querySelectorAll('.gap-sm.grid.grid-cols-6').forEach(grid => {
-                // Check each child individually instead of hiding all
-                Array.from(grid.children).forEach(child => {
-                    // Only hide if it contains ad indicators
-                    for (const selector of adSelectors) {
-                        try {
-                            if (child.querySelector(selector)) {
-                                child.style.display = 'none';
-                                break;
-                            }
-                        } catch (e) {
-                            // Ignore invalid selectors
-                        }
-                    }
-                });
-            });
-        },
+        // Remove Discover button and its container
+        document.querySelectorAll('a[aria-label="Discover"]').forEach(element => {
+            const parent = element.closest('.relative.justify-center.w-full');
+            if (parent) parent.style.display = 'none';
+            else element.style.display = 'none';
+        });
 
-        removeDiscoverButton: () => {
-            document.querySelectorAll('a[aria-label="Discover"]').forEach(a => {
-                // Find and remove the button's container
-                const container = a.closest('.relative.justify-center.w-full');
-                if (container) {
-                    container.style.display = 'none';
-                } else {
-                    a.style.display = 'none';
-                }
-            });
-        }
-    };
+        // Remove Windows app promotion
+        document.querySelectorAll('div[class*="Introducing"]').forEach(element => {
+            element.style.display = 'none';
+        });
+    }
 
-    // Less aggressive observer configuration
+    // More efficient observer with better targeting
     const observerConfig = {
         childList: true,
-        subtree: true,
-        attributes: false  // Don't watch attributes to reduce processing
+        subtree: true
     };
 
-    // Simplified DOM change handler with debounce
+    // Debounced cleanup function
     let debounceTimeout = null;
     function handleDOMChanges() {
         if (debounceTimeout) clearTimeout(debounceTimeout);
-
         debounceTimeout = setTimeout(() => {
-            cleanupOperations.removeAds();
-            cleanupOperations.removeDiscoverButton();
-        }, 300);  // Slower timing to avoid performance issues
+            cleanupElements();
+        }, 200);
     }
 
-    // Detect route changes in SPA
-    function detectRouteChanges() {
-        let lastUrl = location.href;
-        const observer = new MutationObserver(() => {
-            if (location.href !== lastUrl) {
-                lastUrl = location.href;
-                // Delay cleanup to avoid breaking the UI
-                setTimeout(handleDOMChanges, 500);
-            }
-        });
-        observer.observe(document, {subtree: true, childList: true});
-    }
-
-    // Initialization sequence
-    (function init() {
-        // Immediate style injection
+    // Initialize
+    function init() {
+        // Inject styles immediately
         if (document.head) {
             injectCoreStyles();
         } else {
-            new MutationObserver((_, observer) => {
-                if (document.head) {
-                    injectCoreStyles();
-                    observer.disconnect();
-                }
-            }).observe(document.documentElement, { childList: true });
+            document.addEventListener('DOMContentLoaded', injectCoreStyles);
         }
 
-        // Configure main observer with less aggressive settings
-        const domObserver = new MutationObserver(handleDOMChanges);
-        domObserver.observe(document, observerConfig);
-
-        // Setup SPA route change detection
-        detectRouteChanges();
-
-        // Initial cleanup and setup interval (slower interval)
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                handleDOMChanges();
-                setInterval(handleDOMChanges, 5000);  // Much slower interval
-            });
+        // Setup DOM observer
+        const observer = new MutationObserver(handleDOMChanges);
+        if (document.body) {
+            observer.observe(document.body, observerConfig);
+            cleanupElements();
         } else {
-            handleDOMChanges();
-            setInterval(handleDOMChanges, 5000);  // Much slower interval
+            document.addEventListener('DOMContentLoaded', () => {
+                observer.observe(document.body, observerConfig);
+                cleanupElements();
+            });
         }
-    })();
+
+        // Periodic cleanup for dynamic content
+        setInterval(cleanupElements, 2000);
+
+        // Handle SPA navigation
+        let lastUrl = location.href;
+        const urlObserver = new MutationObserver(() => {
+            if (location.href !== lastUrl) {
+                lastUrl = location.href;
+                setTimeout(cleanupElements, 500);
+            }
+        });
+        urlObserver.observe(document, observerConfig);
+    }
+
+    // Execute initialization
+    init();
 })();
