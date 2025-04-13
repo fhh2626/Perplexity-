@@ -319,16 +319,6 @@
         setTimeout(() => switchToModel(model, true), 1000);
     }
 
-    function showNotification(msg) {
-        const old = document.querySelector('.model-notification');
-        if (old) old.remove();
-        const noti = document.createElement('div');
-        noti.className = 'model-notification';
-        noti.textContent = msg;
-        document.body.appendChild(noti);
-        setTimeout(() => { if (document.body.contains(noti)) noti.remove(); }, 3000);
-    }
-
     function clickCpuButton() {
         const buttons = document.querySelectorAll('button:has(svg.tabler-icon-cpu), button:has(svg[class*="tabler"][class*="cpu"])');
         if (buttons.length) { buttons[0].click(); return true; }
@@ -367,12 +357,12 @@
 
     function switchToModel(modelName, isSecondAttempt = false) {
         if (!clickCpuButton()) {
-            if (!isSecondAttempt) showNotification(getLocalizedText('Could not find model selector button', '未找到模型选择按钮'));
+            // 移除了找不到模型选择按钮时的提示
             return;
         }
         setTimeout(() => {
             if (!clickModelOption(modelName) && !isSecondAttempt) {
-                showNotification(`${getLocalizedText('Could not find model:', '未找到模型:')} ${modelName}`);
+                // 移除了未找到指定模型时的提示
             }
         }, 200);
     }
@@ -424,19 +414,6 @@
                 width: 280px;
                 display: none;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            }
-            .model-notification {
-                position: fixed;
-                bottom: 140px;
-                right: 20px;
-                background: #4CAF50;
-                color: white;
-                padding: 10px 15px;
-                border-radius: 5px;
-                z-index: 10001;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                font-size: 14px;
             }
         `;
         document.head.appendChild(style);
