@@ -25,7 +25,7 @@
         "Sonar",
         "Claude 3.7 Sonnet",
         "Claude 3.7 Sonnet Thinking",
-        "GPT-4o",
+        "GPT-4.1",
         "Gemini 2.5 Pro",
         "Grok-2",
         "R1 1776",
